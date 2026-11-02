@@ -34,6 +34,7 @@ export async function readClipboard(pastedText?: string, cwd = process.cwd()): P
     }
     return { text: pastedText }
   }
+  if (process.platform === "linux") return readLinuxClipboard(process.env)
   if (process.platform !== "darwin") return { text: pastedText ?? "" }
   const directory = await mkdtemp(path.join(os.tmpdir(), "pasode-clipboard-"))
   const file = path.join(directory, "image.png")
@@ -54,4 +55,52 @@ export async function readClipboard(pastedText?: string, cwd = process.cwd()): P
   }
   if (pastedText !== undefined) return { text: pastedText }
   return { text: (await exec("pbpaste", [], { timeout: 5000, maxBuffer: 16 * 1024 * 1024 })).stdout }
+}
+
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"]
+const IMAGE_LIMIT = 20 * 1024 * 1024
+
+/** Runs a clipboard tool and returns its stdout bytes; throws when the tool is missing or fails. */
+export type Run = (cmd: string, args: string[]) => Promise<Buffer>
+
+const runTool: Run = async (cmd, args) =>
+  (await exec(cmd, args, { encoding: "buffer", timeout: 5000, maxBuffer: IMAGE_LIMIT + 1024 * 1024 })).stdout
+
+/** The clipboard's best image type pasode can attach (PNG first), if any. */
+export function pickImageType(types: string[]) {
+  const offered = new Set(types.map((type) => type.trim().toLowerCase()))
+  return IMAGE_TYPES.find((type) => offered.has(type))
+}
+
+/**
+ * Linux clipboard, like OpenCode's: wl-paste on Wayland, xclip on X11 (and as a fallback under XWayland).
+ * An image becomes an attachment; otherwise the clipboard text is pasted. A missing tool or empty clipboard
+ * gives empty text, never an error.
+ */
+export async function readLinuxClipboard(env: Record<string, string | undefined>, run: Run = runTool): Promise<{ image: PromptSubmit["images"][number] } | { text: string }> {
+  const tools: { list: [string, string[]]; image: (type: string) => [string, string[]]; text: [string, string[]] }[] = []
+  if (env.WAYLAND_DISPLAY) {
+    tools.push({ list: ["wl-paste", ["--list-types"]], image: (type) => ["wl-paste", ["--no-newline", "--type", type]], text: ["wl-paste", ["--no-newline"]] })
+  }
+  if (env.DISPLAY || env.WAYLAND_DISPLAY) {
+    const xclip = ["-selection", "clipboard"]
+    tools.push({ list: ["xclip", [...xclip, "-t", "TARGETS", "-o"]], image: (type) => ["xclip", [...xclip, "-t", type, "-o"]], text: ["xclip", [...xclip, "-o"]] })
+  }
+  for (const tool of tools) {
+    let types: string[]
+    try {
+      types = (await run(...tool.list)).toString("utf8").split("\n")
+    } catch {
+      continue // tool not installed or no clipboard owner; try the next one
+    }
+    const mimeType = pickImageType(types)
+    if (mimeType) {
+      const bytes = await run(...tool.image(mimeType)).catch(() => Buffer.alloc(0))
+      if (bytes.length > IMAGE_LIMIT) throw new Error("Clipboard image exceeds the 20 MB attachment limit")
+      if (bytes.length) return { image: { data: bytes.toString("base64"), mimeType } }
+    }
+    const text = await run(...tool.text).catch(() => Buffer.alloc(0))
+    return { text: text.toString("utf8") }
+  }
+  return { text: "" }
 }

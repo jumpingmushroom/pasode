@@ -99,7 +99,8 @@ Quitting from a session prints its title and `pasode -s <id>` to continue, like 
 - **Navigation**: jump to message (`ctrl+x g`), previous/next message (`ctrl+x [` / `]`), first/last, last user
   message, page up/down, previous/next child session (`ctrl+x ←` / `→`).
 - **Prompt**: only what Paseo takes: the typed text, sent as-is, plus native image attachments (`ctrl+v` or a pasted
-  image path; thumbnails above the input, click or backspace-on-empty removes). `/` completion anywhere in the text
+  image path; `ctrl+v` reads the clipboard with `osascript` on macOS and `wl-paste`, then `xclip`, on Linux;
+  thumbnails above the input, click or backspace-on-empty removes). `/` completion anywhere in the text
   (ours plus the provider's commands and skills, on the home screen too; a typed `/rename <name>` is ours, so
   the Paseo title changes, not only Claude Code's own session name), `@` completes workspace paths and inserts them
   quoted (plain text, like the Paseo app), `$EDITOR` (`ctrl+x e`), mid-turn messages steer the turn. ↑/↓ recall the
