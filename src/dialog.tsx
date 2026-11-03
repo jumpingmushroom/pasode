@@ -238,7 +238,12 @@ export function DialogSelect<T>(props: {
                     paddingLeft={isCurrent() || option().gutter ? 1 : 3}
                     paddingRight={3}
                     backgroundColor={active() ? (option().bg ?? theme.primary) : RGBA.fromInts(0, 0, 0, 0)}
-                    onMouseOver={() => select(index())}
+                    onMouseOver={() => {
+                      // Report the hovered row like the arrow keys do (moveTo), so callers' footers follow it; no scroll here.
+                      if (selected() === index()) return
+                      select(index())
+                      props.onMove?.(option())
+                    }}
                     onMouseUp={() => submit(option())}
                   >
                     <Show when={option().gutter} fallback={<Show when={isCurrent()}><text fg={fg()}>●</text></Show>}>
