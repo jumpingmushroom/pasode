@@ -46,11 +46,29 @@ export function reasoningSummary(text: string) {
   return title?.[1]?.trim() ?? content.split(/\r?\n/, 1)[0]?.replace(/^#+\s*/, "") ?? ""
 }
 
-export function timestampLabel(timestamp: number, now = new Date()) {
+export function timestampLabel(timestamp: number, now = new Date(), locale = timeLocale()) {
   const date = new Date(timestamp)
   if (!Number.isFinite(date.getTime())) return ""
-  const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-  return date.toDateString() === now.toDateString() ? time : `${date.toLocaleDateString()} ${time}`
+  const time = date.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" })
+  return date.toDateString() === now.toDateString() ? time : `${date.toLocaleDateString(locale)} ${time}`
+}
+
+/**
+ * The locale for dates and times: LC_ALL, then LC_TIME, then LANG, as POSIX programs read them. Bun's Intl only looks
+ * at LANG, so a system with English text and Norwegian times (LANG=en_US, LC_TIME=nb_NO) would get AM/PM otherwise.
+ * "nb_NO.UTF-8" becomes "nb-NO"; C, POSIX, and unknown values fall through; undefined means the runtime default.
+ */
+export function timeLocale(env: Record<string, string | undefined> = process.env): string | undefined {
+  for (const name of ["LC_ALL", "LC_TIME", "LANG"]) {
+    const value = env[name]?.split(/[.@]/)[0]?.replace("_", "-")
+    if (!value || value === "C" || value === "POSIX") continue
+    try {
+      if (Intl.DateTimeFormat.supportedLocalesOf(value).length) return value
+    } catch {
+      // Not a valid language tag: try the next variable.
+    }
+  }
+  return undefined
 }
 
 /** Who an agent-to-agent message came from: the sender's title, else its id (a UUID shortened like `paseo ls`). */

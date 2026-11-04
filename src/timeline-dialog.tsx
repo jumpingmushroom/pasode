@@ -5,6 +5,7 @@ import * as actions from "./actions"
 import { dialog, DialogSelect, type SelectOption } from "./dialog"
 import { matchedPrompts, promptKeys, promptPreview, userRowKeys, type Prompt } from "./messages"
 import { daemon, loadOlder, timeline } from "./paseo"
+import { timeLocale } from "./render/helpers"
 import { Spinner } from "./session"
 import { current, notify, showError, subagent } from "./state"
 
@@ -12,8 +13,8 @@ type Handlers = { scrollToRow: (index: number) => void; restore: (text: string) 
 
 const stamp = (iso: string) => {
   const at = new Date(iso)
-  const time = at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-  return at.toDateString() === new Date().toDateString() ? time : `${at.toLocaleDateString([], { month: "short", day: "numeric" })} ${time}`
+  const time = at.toLocaleTimeString(timeLocale(), { hour: "2-digit", minute: "2-digit" })
+  return at.toDateString() === new Date().toDateString() ? time : `${at.toLocaleDateString(timeLocale(), { month: "short", day: "numeric" })} ${time}`
 }
 
 /** Pages history in until the user message with this key is loaded. */

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { applyPatch, parsePatch } from "diff"
-import { collapseToolOutput, editDiff, filetype, reasoningSummary, senderLabel, timestampLabel } from "./helpers"
+import { collapseToolOutput, editDiff, filetype, reasoningSummary, senderLabel, timeLocale, timestampLabel } from "./helpers"
 
 describe("editDiff", () => {
   test("keeps an existing unified diff", () => {
@@ -59,10 +59,31 @@ test("reasoning summaries prefer a bold title, otherwise the first line", () => 
 test("timestamps show time today, date and time otherwise; invalid timestamps are empty", () => {
   const today = new Date(2026, 9, 9, 14, 30)
   const yesterday = new Date(2026, 9, 8, 14, 30)
-  const time = today.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+  const time = today.toLocaleTimeString(timeLocale(), { hour: "numeric", minute: "2-digit" })
   expect(timestampLabel(today.getTime(), today)).toBe(time)
-  expect(timestampLabel(yesterday.getTime(), today)).toBe(`${yesterday.toLocaleDateString()} ${time}`)
+  expect(timestampLabel(yesterday.getTime(), today)).toBe(`${yesterday.toLocaleDateString(timeLocale())} ${time}`)
   expect(timestampLabel(NaN, today)).toBe("")
+})
+
+test("timestamps use the given locale: 24-hour for nb-NO, AM/PM for en-US", () => {
+  const today = new Date(2026, 9, 9, 14, 30)
+  const yesterday = new Date(2026, 9, 8, 14, 30)
+  expect(timestampLabel(today.getTime(), today, "nb-NO")).toBe("14:30")
+  expect(timestampLabel(yesterday.getTime(), today, "nb-NO")).toBe("8.10.2026 14:30")
+  expect(timestampLabel(today.getTime(), today, "en-US")).toBe("2:30 PM")
+})
+
+test("timeLocale follows LC_ALL, then LC_TIME, then LANG, like other Linux programs", () => {
+  expect(timeLocale({ LANG: "en_US.UTF-8", LC_TIME: "nb_NO.UTF-8" })).toBe("nb-NO")
+  expect(timeLocale({ LANG: "en_US.UTF-8", LC_TIME: "nb_NO.UTF-8", LC_ALL: "de_DE.UTF-8" })).toBe("de-DE")
+  expect(timeLocale({ LANG: "en_GB.UTF-8" })).toBe("en-GB")
+  expect(timeLocale({ LANG: "en_US.UTF-8", LC_ALL: "" })).toBe("en-US")
+  expect(timeLocale({ LC_TIME: "de_DE@euro" })).toBe("de-DE")
+  // C and POSIX mean "no locale": fall through to the next variable, else the runtime default.
+  expect(timeLocale({ LC_TIME: "C.UTF-8", LANG: "nb_NO.UTF-8" })).toBe("nb-NO")
+  expect(timeLocale({ LANG: "POSIX" })).toBeUndefined()
+  expect(timeLocale({})).toBeUndefined()
+  expect(timeLocale({ LC_TIME: "not a locale!" })).toBeUndefined()
 })
 
 test("an agent message's sender is its title, else its id with a UUID shortened", () => {

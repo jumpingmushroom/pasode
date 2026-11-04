@@ -6,6 +6,7 @@ import { createMemo, createSignal, onCleanup } from "solid-js"
 import { agentConfig } from "../actions"
 import { dialog, dialogs, DialogSelect, truncate } from "../dialog"
 import { agents, daemon, sessionTitle } from "../paseo"
+import { timeLocale } from "../render/helpers"
 import { current, draft, notify, showError } from "../state"
 import { theme } from "../theme"
 
@@ -23,7 +24,7 @@ export function cadenceLabel(cadence: Schedule["cadence"]) {
 
 export const scheduleName = (schedule: Schedule) => schedule.name || truncate(schedule.prompt, 40)
 
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "—")
+const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(timeLocale(), { dateStyle: "medium", timeStyle: "short" }) : "—")
 
 export function scheduleDetails(schedule: Schedule, runs: Run[]) {
   const { target, cadence } = schedule
