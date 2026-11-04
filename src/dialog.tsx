@@ -1,6 +1,7 @@
 import { RGBA, TextAttributes, type InputRenderable, type KeyEvent, type ScrollBoxRenderable } from "@opentui/core"
 import { useKeyboard, useTerminalDimensions } from "@opentui/solid"
 import { createEffect, createMemo, createSignal, For, on, Show, type JSX } from "solid-js"
+import { isEnter } from "./keys"
 import { theme } from "./theme"
 
 // Ported in spirit from OpenCode's ui/dialog.tsx + ui/dialog-select.tsx (MIT), trimmed to what we use.
@@ -168,7 +169,7 @@ export function DialogSelect<T>(props: {
       if (key.name === "down" || (key.ctrl && key.name === "n")) return move(1), true
       if (key.name === "pageup") return move(-10), true
       if (key.name === "pagedown") return move(10), true
-      if (key.name === "return") return submit(), true
+      if (isEnter(key)) return submit(), true
       const action = props.actions?.find((item) => item.match(key))
       const option = filtered()[selected()]
       if (action && (option || action.global)) return action.run(option as SelectOption<T>, key), true
@@ -299,7 +300,7 @@ export function DialogConfirm(props: { title: string; message: string; label?: s
   useKeyboard((key) => {
     if (key.defaultPrevented) return
     if (key.name === "left" || key.name === "right" || key.name === "tab") setOk((value) => !value)
-    else if (key.name === "return") props.onDone(ok())
+    else if (isEnter(key)) props.onDone(ok())
     else return
     key.preventDefault()
   })
@@ -351,7 +352,7 @@ export function DialogPrompt(props: { title: string; description?: string; place
 
 export function DialogAlert(props: { title: string; message: string; onDone: () => void }) {
   useKeyboard((key) => {
-    if (key.defaultPrevented || key.name !== "return") return
+    if (key.defaultPrevented || !isEnter(key)) return
     key.preventDefault()
     props.onDone()
   })

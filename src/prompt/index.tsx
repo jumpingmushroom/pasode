@@ -15,6 +15,7 @@ import { mentionTrigger, quoteMention } from "./mention"
 import { PromptMetadata, takeWidth } from "./metadata"
 import { appendSnapshot, expandPasted, summarizePaste, type Pasted } from "./paste"
 import { QueueDock } from "./queue"
+import { isEnter, withKeypadEnter } from "../keys"
 import { PromptSpinner } from "./spinner"
 import type { PromptProps, PromptRef, PromptSnapshot, PromptSubmit, SlashItem } from "./types"
 
@@ -213,7 +214,7 @@ export function Prompt(props: PromptProps) {
         if (list.length) {
           if (!key.shift && key.name === "up") return setSelected((i) => (i - 1 + list.length) % list.length), true
           if (!key.shift && key.name === "down") return setSelected((i) => (i + 1) % list.length), true
-          if (!key.shift && (key.name === "tab" || key.name === "return")) return list[selected()]?.run(), true
+          if (!key.shift && (key.name === "tab" || isEnter(key))) return list[selected()]?.run(), true
           if (key.name === "escape") return setDismissed(completionKey()), true
         }
         if (!key.shift && key.name === "backspace" && !(input?.plainText ?? text()).length && images().length)
@@ -383,13 +384,13 @@ export function Prompt(props: PromptProps) {
             cursorColor={theme.text}
             minHeight={1}
             maxHeight={Math.max(6, Math.floor(dimensions().height / 3))}
-            keyBindings={[
+            keyBindings={withKeypadEnter([
               { name: "return", action: "submit" },
               { name: "return", shift: true, action: "newline" },
               { name: "return", ctrl: true, action: "newline" },
               { name: "return", meta: true, action: "newline" },
               { name: "j", ctrl: true, action: "newline" },
-            ]}
+            ])}
             onSubmit={() => void submit()}
           />
           <Show when={error()}><text fg={theme.error}>{error()}</text></Show>

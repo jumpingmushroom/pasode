@@ -136,6 +136,29 @@ test("prompt inserts modified-enter newlines", async () => {
   }
 })
 
+test("the keypad Enter sends like Enter, and adds a newline with shift", async () => {
+  let prompt: PromptRef | undefined
+  const submissions: PromptSubmit[] = []
+  const screen = await testRender(() => <Prompt {...display} focused cwd={process.cwd()}
+    slashItems={[]} footerRight={<text>commands</text>} ref={(api) => prompt = api}
+    onSubmit={(value) => { submissions.push(value) }} />, { width: 80, height: 24, kittyKeyboard: true })
+  try {
+    await screen.flush()
+    await screen.mockInput.typeText("one")
+    // The kitty keyboard protocol's keypad Enter (KP_Enter, 57414), first with shift, then bare.
+    screen.renderer.stdin.emit("data", Buffer.from("\x1b[57414;2u"))
+    await screen.mockInput.typeText("two")
+    await screen.flush()
+    expect(prompt?.text()).toBe("one\ntwo")
+    expect(submissions).toHaveLength(0)
+    screen.renderer.stdin.emit("data", Buffer.from("\x1b[57414u"))
+    await screen.flush()
+    expect(submissions).toHaveLength(1)
+  } finally {
+    screen.renderer.destroy()
+  }
+})
+
 test("punctuation is literal, submission preserves whitespace and arrows only move the cursor", async () => {
   let prompt: PromptRef | undefined
   const submissions: PromptSubmit[] = []

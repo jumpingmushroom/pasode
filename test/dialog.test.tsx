@@ -114,3 +114,26 @@ test("a selection that is reordered out of the viewport is scrolled back into vi
   expect(picked).toEqual(["Session 00"])
   screen.renderer.destroy()
 })
+
+test("the keypad Enter (kitty's KP_Enter) picks the selected row, like Enter", async () => {
+  const picked: string[] = []
+  const screen = await testRender(
+    () => (
+      <DialogSelect
+        title="Pick"
+        options={[{ title: "Alpha", value: "a" }, { title: "Beta", value: "b" }]}
+        onSelect={(option) => picked.push(option.value)}
+      />
+    ),
+    { width: 60, height: 20, kittyKeyboard: true },
+  )
+  try {
+    await screen.renderOnce()
+    screen.mockInput.pressArrow("down")
+    screen.renderer.stdin.emit("data", Buffer.from("\x1b[57414u"))
+    await screen.renderOnce()
+    expect(picked).toEqual(["b"])
+  } finally {
+    screen.renderer.destroy()
+  }
+})

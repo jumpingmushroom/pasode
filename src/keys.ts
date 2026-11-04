@@ -39,9 +39,23 @@ function parseStroke(token: string): Stroke | undefined {
   return stroke
 }
 
+/**
+ * Enter on the main keyboard or the keypad. With the kitty keyboard protocol the keypad's Enter arrives as its own
+ * key, "kpenter"; everywhere else in a terminal it is just Enter, so pasode treats the two the same.
+ */
+export const isEnter = (key: Pick<KeyEvent, "name">) => key.name === "return" || key.name === "kpenter"
+
+/** A key's name for matching bindings: the keypad Enter matches bindings for Enter ("return"). */
+const bindingName = (name: string) => (name === "kpenter" ? "return" : name)
+
+/** Textarea key bindings with a "kpenter" copy right after each "return" one, so the keypad Enter does the same. */
+export function withKeypadEnter<T extends { name: string }>(bindings: T[]): T[] {
+  return bindings.flatMap((binding) => (binding.name === "return" ? [binding, { ...binding, name: "kpenter" }] : [binding]))
+}
+
 export function matchStroke(stroke: Stroke, key: Pick<KeyEvent, "name" | "ctrl" | "shift" | "meta" | "super">) {
   return (
-    stroke.name === key.name &&
+    stroke.name === bindingName(key.name) &&
     stroke.ctrl === key.ctrl &&
     stroke.shift === key.shift &&
     stroke.meta === key.meta &&

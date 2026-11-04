@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { createKeymap, formatBinding, parseBinding } from "./keys"
+import { createKeymap, formatBinding, isEnter, parseBinding, withKeypadEnter } from "./keys"
 
 const key = (name: string, mods: Partial<Record<"ctrl" | "shift" | "meta" | "super", boolean>> = {}) => ({
   name,
@@ -49,4 +49,34 @@ test("punctuation strokes: `.` and `,` bind, and a trailing comma is the key, no
   const keymap = createKeymap(() => [{ id: "previous", sequences: parseBinding("<leader>,") }])
   keymap.feed(key("x", { ctrl: true }))
   expect(keymap.feed(key(","))).toBe("previous")
+})
+
+test("the keypad Enter (kpenter in the kitty keyboard protocol) counts as Enter", () => {
+  expect(isEnter(key("return"))).toBe(true)
+  expect(isEnter(key("kpenter"))).toBe(true)
+  expect(isEnter(key("linefeed"))).toBe(false)
+  expect(isEnter(key("e"))).toBe(false)
+
+  const keymap = createKeymap(() => [
+    { id: "submit", sequences: parseBinding("enter") },
+    { id: "newline", sequences: parseBinding("shift+return") },
+  ])
+  expect(keymap.feed(key("kpenter"))).toBe("submit")
+  expect(keymap.feed(key("kpenter", { shift: true }))).toBe("newline")
+})
+
+test("withKeypadEnter gives each return binding a kpenter twin, and leaves the rest alone", () => {
+  expect(
+    withKeypadEnter([
+      { name: "return", action: "submit" },
+      { name: "return", shift: true, action: "newline" },
+      { name: "j", ctrl: true, action: "newline" },
+    ]),
+  ).toEqual([
+    { name: "return", action: "submit" },
+    { name: "kpenter", action: "submit" },
+    { name: "return", shift: true, action: "newline" },
+    { name: "kpenter", shift: true, action: "newline" },
+    { name: "j", ctrl: true, action: "newline" },
+  ])
 })

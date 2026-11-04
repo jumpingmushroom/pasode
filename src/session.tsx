@@ -13,6 +13,7 @@ import { collapseShellOutput } from "./render/shell-output"
 import { durationLabel, turnFooters, type TurnFooter } from "./render/turns"
 import { prefs } from "./state"
 import { collapseForkContext, errorText, imageFile, toolSummary, type AgentTimelineItem, type ToolCallTimelineItem } from "./timeline"
+import { isEnter } from "./keys"
 import { syntax, theme } from "./theme"
 
 // Rendering adapted from OpenCode (MIT); see render/OPENCODE-LICENSE.
@@ -717,7 +718,7 @@ export function PermissionPrompt(props: {
     const total = choices().length
     if ((key.name === "left" || key.name === "up" || (key.shift && key.name === "tab")) && total) setSelected((i) => (i - 1 + total) % total)
     else if ((key.name === "right" || key.name === "down" || key.name === "tab") && total) setSelected((i) => (i + 1) % total)
-    else if (key.name === "return") choose(choices()[selected()])
+    else if (isEnter(key)) choose(choices()[selected()])
     else if (key.name === "escape") props.onRespond({ behavior: "deny", message: "Rejected by user" })
     else return
     key.preventDefault()

@@ -9,6 +9,7 @@ import { agents, daemon, findModel, openSubagentTimeline } from "./paseo"
 import { agentId, navigate, setSubagent, showError } from "./state"
 import { SplitBorder } from "./session"
 import { createTerminal, handleTerminalKey, paneFocused, TerminalPane, terminals, type Terminal } from "./terminal"
+import { isEnter } from "./keys"
 import { theme } from "./theme"
 
 export { registerTerminalCommands, terminals, useTerminalFeed } from "./terminal"
@@ -151,7 +152,7 @@ export function handleComposerKey(key: KeyEvent) {
     setSelected(0)
   } else if (key.name === "up") selected() === 0 ? closeComposer() : setSelected((index) => index - 1)
   else if (key.name === "down") count && setSelected((index) => (index + 1) % count)
-  else if (key.name === "return") {
+  else if (isEnter(key)) {
     if (tab() === "subagents") {
       const entry = visibleSubagents()[selected()]
       if (entry) closeComposer(), void openSubagent(entry)
